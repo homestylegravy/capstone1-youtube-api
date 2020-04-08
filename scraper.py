@@ -129,7 +129,7 @@ def write_to_file(country_code, country_data):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    with open(f"{output_dir}/{time.strftime('%y.%d.%m')}_{country_code}_videos.csv", "w+", encoding='utf-8') as file:
+    with open(f"{output_dir}/{time.strftime('%y.%d.%m.%H.%M')}_{country_code}_videos.csv", "w+", encoding='utf-8') as file:
         for row in country_data:
             file.write(f"{row}\n")
 
