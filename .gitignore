@@ -1,6 +1,9 @@
 # Don't upload the big zip file
 *.zip
 
+# Don't upload the key file
+*.key
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
