@@ -3,9 +3,10 @@
 ### *Tyler Hubble*
 ![Image of a bored kid](https://www.futurity.org/wp/wp-content/uploads/2020/04/homeschooling-kids-during-COVID-19_1600.jpg)
 [Markdown Cheat Sheet](https://www.markdownguide.org/cheat-sheet/)
----
+
 The effects of social isolation in response to the Covid-19 pandemic have led to public gatherings being restricted, including schools. As school-aged children have been forced to remain at home 
----
+
+Interesting Stats from [YouTube for Press](https://www.youtube.com/about/press)
 
 # Exploratory Data Analysis
 ```python
