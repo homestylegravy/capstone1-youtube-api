@@ -35,7 +35,9 @@ def prepare_feature(feature):
 
 def api_request(page_token, country_code):
     # Builds the URL and requests the JSON from it
-    request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet{page_token}chart=mostPopular&regionCode={country_code}&maxResults=50&key={api_key}"
+    request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet{page_token}chart=mostPopular&regionCode={country_code}&maxResults=100&key={api_key}"
+    print("request_url:", request_url)
+    return None
     request = requests.get(request_url)
     if request.status_code == 429:
         print("Temp-Banned due to excess requests, please wait and continue later")
@@ -93,9 +95,7 @@ def get_videos(items):
             comment_count = 0
 
         # Compiles all of the various bits of info into one consistently formatted line
-        line = [video_id] + features + [prepare_feature(x) for x in [trending_date, tags, view_count, likes, dislikes,
-                                                                       comment_count, thumbnail_link, comments_disabled,
-                                                                       ratings_disabled, description]]
+        line = [video_id] + features + [prepare_feature(x) for x in [trending_date, tags, view_count, likes, dislikes, comment_count, thumbnail_link, comments_disabled, ratings_disabled, description]]
         lines.append(",".join(line))
     return lines
 
@@ -103,8 +103,9 @@ def get_videos(items):
 def get_pages(country_code, next_page_token="&"):
     country_data = []
 
-    # Because the API uses page tokens (which are literally just the same function of numbers everywhere) it is much
-    # more inconvenient to iterate over pages, but that is what is done here.
+    # Because the API uses page tokens (which are literally just the same function 
+    # of numbers everywhere) it is much more inconvenient to iterate over pages, 
+    # but that is what is done here.
     while next_page_token is not None:
         # A page of data i.e. a list of videos and all needed data
         video_data_page = api_request(next_page_token, country_code)
