@@ -5,6 +5,8 @@
 *.key
 credentials.json
 api_key.txt
+*.pickle
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
