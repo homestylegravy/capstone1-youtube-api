@@ -38,7 +38,6 @@ def api_request(page_token, country_code="US", n=50):
     request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet{page_token}chart=mostPopular&regionCode={country_code}&maxResults={n}&key={api_key}"
     print("page_token:", page_token)
     print("request_url:", request_url)
-    return None
     request = requests.get(request_url)
     if request.status_code == 429:
         print("Temp-Banned due to excess requests, please wait and continue later")
