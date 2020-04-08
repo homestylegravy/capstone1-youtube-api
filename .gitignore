@@ -3,6 +3,8 @@
 
 # Don't upload the key file
 *.key
+credentials.json
+api_key.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
