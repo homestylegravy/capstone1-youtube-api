@@ -33,12 +33,9 @@ def prepare_feature(feature):
     return f'"{feature}"'
 
 
-def api_request(page_token, country_code="US", n=50):
+def api_request(page_token, country_code):
     # Builds the URL and requests the JSON from it
-    request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet{page_token}chart=mostPopular&regionCode={country_code}&key={api_key}"    
-#     request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet{page_token}chart=mostPopular&regionCode={country_code}&maxResults={n}&key={api_key}"
-    print("page_token:", page_token)
-    print("request_url:", request_url)
+    request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet{page_token}chart=mostPopular&regionCode={country_code}&maxResults=50&key={api_key}"
     request = requests.get(request_url)
     if request.status_code == 429:
         print("Temp-Banned due to excess requests, please wait and continue later")
@@ -96,7 +93,9 @@ def get_videos(items):
             comment_count = 0
 
         # Compiles all of the various bits of info into one consistently formatted line
-        line = [video_id] + features + [prepare_feature(x) for x in [trending_date, tags, view_count, likes, dislikes, comment_count, thumbnail_link, comments_disabled, ratings_disabled, description]]
+        line = [video_id] + features + [prepare_feature(x) for x in [trending_date, tags, view_count, likes, dislikes,
+                                                                       comment_count, thumbnail_link, comments_disabled,
+                                                                       ratings_disabled, description]]
         lines.append(",".join(line))
     return lines
 
@@ -104,9 +103,8 @@ def get_videos(items):
 def get_pages(country_code, next_page_token="&"):
     country_data = []
 
-    # Because the API uses page tokens (which are literally just the same function 
-    # of numbers everywhere) it is much more inconvenient to iterate over pages, 
-    # but that is what is done here.
+    # Because the API uses page tokens (which are literally just the same function of numbers everywhere) it is much
+    # more inconvenient to iterate over pages, but that is what is done here.
     while next_page_token is not None:
         # A page of data i.e. a list of videos and all needed data
         video_data_page = api_request(next_page_token, country_code)
@@ -130,7 +128,7 @@ def write_to_file(country_code, country_data):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    with open(f"{output_dir}/{time.strftime('%y.%d.%m.%H.%M')}_{country_code}_videos.csv", "w+", encoding='utf-8') as file:
+    with open(f"{output_dir}/{time.strftime('%y.%d.%m.%H:%M')}_{country_code}_videos.csv", "w+", encoding='utf-8') as file:
         for row in country_data:
             file.write(f"{row}\n")
 
@@ -146,7 +144,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--key_path', help='Path to the file containing the api key, by default will use api_key.txt in the same directory', default='api_key.txt')
     parser.add_argument('--country_code_path', help='Path to the file containing the list of country codes to scrape, by default will use country_codes.txt in the same directory', default='country_codes.txt')
-    parser.add_argument('--output_dir', help='Path to save the outputted files in', default='data/')
+    parser.add_argument('--output_dir', help='Path to save the outputted files in', default='output/')
 
     args = parser.parse_args()
 
