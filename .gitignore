@@ -4,6 +4,7 @@
 # Don't upload the key file
 *.key
 credentials.json
+token.pickle
 api_key.txt
 *.json
 client_secret_file.json
