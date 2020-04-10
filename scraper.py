@@ -1,4 +1,5 @@
 import requests, sys, time, os, argparse, json, csv, pickle, re
+import pandas as pd
 
 with open('api_key.txt', 'r') as file:
     api_key = file.read().rstrip()
@@ -140,21 +141,11 @@ def parse_videos(items):
         video['comment_count'] = int(video['statistics'].get('commentCount', 0))
         new_video = {x:video[x] for x in header}
         lines.append(new_video)
+    
+    timestamp = time.strftime('%y.%m.%d.%H:%M')
     with open(f'videos_{timestamp}.pickle', 'wb') as pickly:
         pickle.dump(lines, pickly)   
     return lines
-
-
-def write_to_file(lines):
-    print(f"Writing video data to file {time.strftime('%y.%m.%d.%H:%M')}...")
-
-    with open(f"{output_dir}/{time.strftime('%y.%m.%d.%H:%M')}_US_videos.csv", "w+", encoding='utf-8') as file:
-        for row in lines:
-            file.write(f"{row}\n")
-    with open(f"{output_dir}/videos.csv", "a+", encoding='utf-8') as file:
-        for row in lines:
-            csv.writer(file).writerow(row)
-            print('Done with that one')
 
 if __name__ == "__main__":
 #     parser = argparse.ArgumentParser()
@@ -164,16 +155,15 @@ if __name__ == "__main__":
 #     args = parser.parse_args()
     while True:
         output_dir = 'data/'
+        timestamp = time.strftime('%y.%m.%d.%H:%M')
         lines = parse_videos(api_request(by_cat=False))
         df = pd.DataFrame(lines)
+        df.to_csv(f'{output_dir}videos_{timestamp}.csv', index=False)
         for cat in cats:
             lines = parse_videos(api_request(by_cat=True, trending=True, catId=cat))
             df_temp = pd.DataFrame(lines)
             df.append(df_temp)
-            with open(f'videos_{timestamp}.pickle', 'wb') as pickly:
-                pickle.dump(df, pickly) 
-            os.sleep(5)
-        
-        write_to_file(lines)
+            df.to_csv(f'{output_dir}videos_{timestamp}.csv', index=False)
+            time.sleep(5)
             
-        os.sleep(1800)
+        time.sleep(1800)
