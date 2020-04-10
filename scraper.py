@@ -132,7 +132,7 @@ if __name__ == "__main__":
         for cat in cats:
             lines = parse_videos(api_request(by_cat=True, trending=True, catId=cat))
             write_to_file(lines)
+        lines = parse_videos(api_request(by_cat=False))
+        write_to_file(lines)
             
-        get_data()
-
         os.sleep(1800)
