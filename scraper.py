@@ -1,5 +1,8 @@
 import requests, sys, time, os, argparse, json, csv, pickle, re
 
+with open('api_key.txt', 'r') as file:
+    api_key = file.read().rstrip()
+            
 # List of simple to collect features
 snippet_features = ["title", "publishedAt", "channelId", "channelTitle", "categoryId"]
 
@@ -11,6 +14,41 @@ things_that_i_dont_want_to_include = ["thumbnail_link", "comments_disabled","rat
 # Any characters to exclude, generally these are things that become problematic in CSV files
 unsafe_characters = ['\n', '"']
 
+# First gather the categories and "guide" categories from the API
+# This counts as a hit on the API, so only do this once and then save the file
+
+cat_path  = 'data/categories.response.pickle'
+categories_url = 'https://www.googleapis.com/youtube/v3/videoCategories?part=snippet&regionCode=US&key='
+
+gcat_path = 'data/guide_categories.response.pickle'
+guide_categories_url = 'https://www.googleapis.com/youtube/v3/guideCategories?part=snippet&regionCode=US&key='
+
+#### Load user-given categories
+if os.path.exists(cat_path):
+    with open(cat_path, 'rb') as pickle_cat:
+        categories_response = pickle.load(pickle_cat)
+else:
+    categories_response  = requests.request('GET', categories_url + api_key)
+    with open(cat_path, 'wb') as cats:
+        pickle.dump(categories_response, cats)
+
+df = pd.DataFrame(categories_response.json()['items'])
+categories = df.join(df.from_records(df['snippet']))
+
+
+#### Load YouTube-assigned categories
+#### I ended up not using these though
+if os.path.exists(gcat_path):
+    with open(gcat_path, 'rb') as pickle_cat:
+        guide_categories_response = pickle.load(pickle_cat)
+else:
+    guide_categories_response  = requests.request('GET', guide_categories_url + api_key)
+    with open(gcat_path, 'wb') as cats:
+        pickle.dump(guide_categories_response, cats)
+
+df = pd.DataFrame(guide_categories_response.json()['items'])
+guide_categories = df.join(df.from_records(df['snippet']))
+
 cats = {1: 'Film & Animation', 2: 'Autos & Vehicles', 10: 'Music', 15: 'Pets & Animals', 17: 'Sports', 18: 'Short Movies', 19: 'Travel & Events', 20: 'Gaming', 21: 'Videoblogging', 22: 'People & Blogs', 23: 'Comedy', 24: 'Entertainment', 25: 'News & Politics', 26: 'Howto & Style', 27: 'Education', 28: 'Science & Technology', 29: 'Nonprofits & Activism', 30: 'Movies', 31: 'Anime/Animation', 32: 'Action/Adventure', 33: 'Classics', 34: 'Comedy', 35: 'Documentary', 36: 'Drama', 37: 'Family', 38: 'Foreign', 39: 'Horror', 40: 'Sci-Fi/Fantasy', 41: 'Thriller', 42: 'Shorts', 43: 'Shows', 44: 'Trailers'}
 
 def prepare_feature(feature):
@@ -18,40 +56,6 @@ def prepare_feature(feature):
     for ch in unsafe_characters:
         feature = str(feature).replace(ch, "")
     return f'"{feature}"'
-
-
-def api_request(pageToken='', by_cat=False, trending=True, catId='', items=[], n=0):
-#     Calls the API and returns a list of items. It has to iterate through recursively
-#     a few times because the full response is split up into multiple pages
-    
-    url_base  = 'https://www.googleapis.com/youtube/v3/videos?'
-    features  =f'part=snippet%2CcontentDetails%2Cstatistics&{pageToken}'
-    category  =f'videoCategoryId={catId}&' if by_cat else ''
-    chart     = 'chart=mostPopular&' if trending else ''
-    other     =f'{chart}regionCode=US&{category}key='
-    url       =  url_base + features + other + api_key
-    response  =  requests.get(url)
-    
-    if response.status_code == 429:
-        print("Temp-Banned due to excess requests, please wait and continue later")
-        sys.exit()
-    response = response.json()
-    
-    itms_lst  =  response['items']
-    for item in itms_lst:
-        n+=1
-        item['rank'] = n
-        items.append(item)
-        
-#     The response doesn't return all the results. Use the token to get the next page
-    token    =  response.get("nextPageToken", None)
-    if token != None:
-        pageToken = f'pageToken={token}&'
-        api_request(pageToken=pageToken, items = items, n=n)
-    timestamp = time.strftime('%y.%m.%d.%H:%M')
-    with open(f'items_{timestamp}.pickle', 'wb') as pickly:
-        pickle.dump(items, pickly)    
-    return items
 
 
 def get_tags(tags_list):
@@ -70,6 +74,38 @@ def calc_seconds(duration):
         nums[hms.index(val[-1])] = int(val[:-1])    
     seconds = nums[0] * 60 * 60 + nums[1]*60 + nums[2]
     return seconds
+
+def api_request(pageToken='', by_cat=False, trending=True, catId='', items=[], n=0):
+#     Calls the API and returns a list of items. It has to iterate through recursively
+#     a few times because the full response is split up into multiple pages
+    
+    url_base  = 'https://www.googleapis.com/youtube/v3/videos?'
+    features  =f'part=snippet%2CcontentDetails%2Cstatistics&{pageToken}'
+    category  =f'videoCategoryId={catId}&' if by_cat else ''
+    chart     = 'chart=mostPopular&' if trending else ''
+    other     =f'{chart}regionCode=US&{category}key='
+    url       =  url_base + features + other + api_key
+    response  =  requests.get(url)
+    
+    if response.status_code == 429:
+        print("Temp-Banned due to excess requests, please wait and continue later")
+        sys.exit()
+    response = response.json()
+    itms_lst  =  response['items']
+    for item in itms_lst:
+        n+=1
+        item['rank'] = n
+        items.append(item)
+#     The response doesn't return all the results. Use the token to get the next page
+    token    =  response.get("nextPageToken", None)
+    if token != None:
+        pageToken = f'pageToken={token}&'
+        api_request(pageToken=pageToken, items = items, n=n)
+    timestamp = time.strftime('%y.%m.%d.%H:%M')
+    with open(f'items_{timestamp}.pickle', 'wb') as pickly:
+        pickle.dump(items, pickly)    
+    return items
+
 
 def parse_videos(items):
     lines = []
@@ -104,7 +140,6 @@ def parse_videos(items):
         video['comment_count'] = int(video['statistics'].get('commentCount', 0))
         new_video = {x:video[x] for x in header}
         lines.append(new_video)
-    
     with open(f'videos_{timestamp}.pickle', 'wb') as pickly:
         pickle.dump(lines, pickly)   
     return lines
@@ -129,13 +164,16 @@ if __name__ == "__main__":
 #     args = parser.parse_args()
     while True:
         output_dir = 'data/'
-        with open('api_key.txt', 'r') as file:
-            api_key = file.read().rstrip()
+        lines = parse_videos(api_request(by_cat=False))
+        df = pd.DataFrame(lines)
         for cat in cats:
             lines = parse_videos(api_request(by_cat=True, trending=True, catId=cat))
-            write_to_file(lines)
+            df_temp = pd.DataFrame(lines)
+            df.append(df_temp)
+            with open(f'videos_{timestamp}.pickle', 'wb') as pickly:
+                pickle.dump(df, pickly) 
             os.sleep(5)
-        lines = parse_videos(api_request(by_cat=False))
+        
         write_to_file(lines)
             
         os.sleep(1800)
