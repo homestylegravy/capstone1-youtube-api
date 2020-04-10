@@ -1,6 +1,5 @@
 # YouTube Use During Social Isolation
-### *Capstone1*
-### *Tyler Hubble*
+### *Capstone1* | *Tyler Hubble*
 ![Image of a bored kid](https://www.futurity.org/wp/wp-content/uploads/2020/04/homeschooling-kids-during-COVID-19_1600.jpg)
 [Markdown Cheat Sheet](https://www.markdownguide.org/cheat-sheet/)
 
