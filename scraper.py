@@ -1,4 +1,4 @@
-import requests, sys, time, os, argparse, json, csv, pickle
+import requests, sys, time, os, argparse, json, csv, pickle, re
 
 # List of simple to collect features
 snippet_features = ["title", "publishedAt", "channelId", "channelTitle", "categoryId"]
