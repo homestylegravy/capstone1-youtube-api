@@ -1,8 +1,9 @@
 # Don't upload the big zip file
 *.zip
 
-# Don't upload the key file
+# Don't upload secret files
 *.key
+*.pem
 credentials.json
 token.pickle
 api_key.txt
