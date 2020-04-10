@@ -4,7 +4,7 @@ import requests, sys, time, os, argparse, json, csv, pickle
 snippet_features = ["title", "publishedAt", "channelId", "channelTitle", "categoryId"]
 
 # Used to identify columns, currently hardcoded order
-header = ["rank", "video_id"] + snippet_features + ["category", "trending_date", "tags", "view_count", "likes", "dislikes", "comment_count","duration"]
+header = ["rank", "video_id"] +  ["title", "publishedAt", "channelId", "channelTitle", "categoryId"] + ["category", "trending_date", "tags", "view_count", "likes", "dislikes", "comment_count", "duration"]
                                             
 things_that_i_dont_want_to_include = ["thumbnail_link", "comments_disabled","ratings_disabled", "description"]
 
@@ -30,11 +30,12 @@ def api_request(pageToken='', by_cat=False, trending=True, catId='', items=[], n
     chart     = 'chart=mostPopular&' if trending else ''
     other     =f'{chart}regionCode=US&{category}key='
     url       =  url_base + features + other + api_key
-    response  =  requests.get(url).json()
+    response  =  requests.get(url)
     
-    if request.status_code == 429:
+    if response.status_code == 429:
         print("Temp-Banned due to excess requests, please wait and continue later")
         sys.exit()
+    response = response.json()
     
     itms_lst  =  response['items']
     for item in itms_lst:
@@ -47,7 +48,8 @@ def api_request(pageToken='', by_cat=False, trending=True, catId='', items=[], n
     if token != None:
         pageToken = f'pageToken={token}&'
         api_request(pageToken=pageToken, items = items, n=n)
-    with open(f'items_{time.strftime('%y.%m.%d.%H:%M')}.pickle', 'wb') as pickly:
+    timestamp = time.strftime('%y.%m.%d.%H:%M')
+    with open(f'items_{timestamp}.pickle', 'wb') as pickly:
         pickle.dump(items, pickly)    
     return items
 
@@ -59,17 +61,13 @@ def get_tags(tags_list):
 
 def calc_seconds(duration):
 #     Takes the YouTube duration field and calculated seconds
+    hms = 'HMS'
+    nums = [0,0,0]
     pattern = '[0-9]+[HMS]'
     result = re.findall(pattern, duration)
     #result for 10 hours, 1 minute, 26 seconds = ['10H', '1M', '26S']
-    
-    nums = [int(val[:-1]) for val in result]
-    
-    if len(nums) == 1:
-        nums = [0, 0].append(nums[0])
-    elif len(nums) == 2:
-        nums = [0] + nums
-
+    for val in result:
+        nums[hms.index(val[-1])] = int(val[:-1])    
     seconds = nums[0] * 60 * 60 + nums[1]*60 + nums[2]
     return seconds
 
@@ -81,30 +79,34 @@ def parse_videos(items):
             continue
         # A full explanation of all of these features can be found on the GitHub page for this project
         rank = video['rank']       #I added this rank during processing
-        video_id = prepare_feature(video['id'])
+        video['video_id'] = video['id']
 
         # Snippet and statistics are sub-dicts of video, containing the most useful info
         snippet = video['snippet']
         statistics = video['statistics']
+        contentDetails = video['contentDetails']
 
         # This list contains all of the features in snippet that are 1 deep and require no special processing
-        features = [prepare_feature(snippet.get(feature, "")) for feature in snippet_features]
+        for feature in snippet_features[:-1]:
+            video[feature] = snippet.get(feature, "") 
+        video['categoryId'] = int(snippet.get('categoryId'))
 #         Add the text of the category
-        features.append(prepare_feature(cats[features[-1]]))
+        video['category'] = cats[video['categoryId']]
 
         # The following are special case features which require unique processing, or are not within the snippet dict
-        description = snippet.get("description", "")
-        trending_date = time.strftime("%y.%m.%d")
-        tags = get_tags(snippet.get("tags", ["[none]"]))
-        view_count = statistics.get("viewCount", 0)
-        duration = calc_seconds(contentDetails.get("duration", 0))
-        likes = statistics.get('likeCount', 0)
-        dislikes = statistics.get('dislikeCount', 0)
-        comment_count = statistics.get('commentCount', 0)
-
-        # Compiles all of the various bits of info into one consistently formatted line
-        line = [rank, video_id] + features + [prepare_feature(x) for x in [trending_date, tags], [view_count, duration, likes, dislikes, comment_count]]
-        lines.append(",".join(line))
+#         description = snippet.get("description", "")
+        video['trending_date'] = time.strftime("%y.%m.%d")
+        video['tags'] = get_tags(video['snippet'].get("tags", ["[none]"]))
+        video['view_count'] = int(video['statistics'].get("viewCount", 0))
+        video['duration'] = calc_seconds(video['contentDetails'].get("duration", 0))
+        video['likes'] = int(video['statistics'].get('likeCount', 0))
+        video['dislikes'] = int(video['statistics'].get('dislikeCount', 0))
+        video['comment_count'] = int(video['statistics'].get('commentCount', 0))
+        new_video = {x:video[x] for x in header}
+        lines.append(new_video)
+    
+    with open(f'videos_{timestamp}.pickle', 'wb') as pickly:
+        pickle.dump(lines, pickly)   
     return lines
 
 
@@ -117,7 +119,7 @@ def write_to_file(lines):
     with open(f"{output_dir}/videos.csv", "a+", encoding='utf-8') as file:
         for row in lines:
             csv.writer(file).writerow(row)
-           
+            print('Done with that one')
 
 if __name__ == "__main__":
 #     parser = argparse.ArgumentParser()
@@ -132,6 +134,7 @@ if __name__ == "__main__":
         for cat in cats:
             lines = parse_videos(api_request(by_cat=True, trending=True, catId=cat))
             write_to_file(lines)
+            os.sleep(5)
         lines = parse_videos(api_request(by_cat=False))
         write_to_file(lines)
             
